@@ -1,0 +1,50 @@
+name: FTP Deploy Workflow
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Shallow Clone the repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      # Setup Node
+      - name: ⚡ Node Setup
+        uses: actions/setup-node@v3
+        with:
+          node-version: '22'
+
+      # Build Backend Assets
+      - name: 📦 Install  Dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --prefer-offline
+          else
+            npm install --prefer-offline
+          fi
+
+      - name: 🛠️ Build Assets
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      # Deploy  Backend Assets          
+      - name: 🚀 Deploy (Delta Uploads)
+        uses: SamKirkland/FTP-Deploy-Action@v4.3.5
+        with:
+          server: ${{ secrets.FTP_SERVER }}
+          port: ${{ secrets.FTP_PORT }}
+          username: ${{ secrets.FTP_USERNAME }}
+          password: ${{ secrets.FTP_PASSWORD }}
+          security: loose
+          exclude: |
+            **/.git/**
+            **/.github/**
+            **/node_modules/**
+            **/.env
+            **/.gitignore
