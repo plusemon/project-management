@@ -1,0 +1,5 @@
+{
+  "name": "DevFocus",
+  "description": "A high-performance, dark-mode focused task manager for developers with Kanban, Markdown support, and integrated Pomodoro timer.",
+  "requestFramePermissions": []
+}
