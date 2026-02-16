@@ -4,6 +4,7 @@ import { useTaskContext } from '../context/TaskContext';
 import { X, Save, Trash2, Tag as TagIcon, Hash } from 'lucide-react';
 import { cn } from '../utils/cn';
 import ReactMarkdown from 'react-markdown';
+import { ConfirmationModal } from './ConfirmationModal';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -21,6 +22,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [projectId, setProjectId] = useState<string>('');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (taskToEdit) {
@@ -68,7 +70,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
   };
 
   const handleDelete = () => {
-    if (taskToEdit && confirm('Are you sure you want to delete this task?')) {
+    setShowDeleteConfirm(true);
+  };
+
+  const handleConfirmDelete = () => {
+    if (taskToEdit) {
       deleteTask(taskToEdit.id);
       onClose();
     }
@@ -234,6 +240,17 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
         </div>
 
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Task"
+        message={`Are you sure you want to delete "${taskToEdit?.title}"? This action cannot be undone.`}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+      />
     </div>
   );
 };
