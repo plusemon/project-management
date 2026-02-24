@@ -79,7 +79,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           security: loose
-          local-dir: dist
+          local-dir: dist/
           exclude: |
             **/.git/**
             **/.github/**
