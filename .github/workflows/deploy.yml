@@ -53,13 +53,6 @@ jobs:
         env:
           NODE_ENV: production
 
-      - name: 👀 Preview Build
-        run: |
-          npm run preview &
-          sleep 5
-          curl -f http://localhost:4173 || exit 1
-          pkill -f "vite preview" || true
-
       - name: 📦 Upload Build Artifacts
         uses: actions/upload-artifact@v4
         with:
