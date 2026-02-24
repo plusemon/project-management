@@ -11,6 +11,14 @@ export interface Tag {
   color: string; // Tailwind color class mostly
 }
 
+export interface Subtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
+export type Priority = 'HIGH' | 'MEDIUM' | 'LOW' | null;
+
 export interface Task {
   id: string;
   title: string;
@@ -22,6 +30,9 @@ export interface Task {
   projectId?: string;
   locallyModified?: boolean;
   order?: number; // For manual ordering within same status
+  dueDate?: number | null; // Timestamp for due date
+  priority?: Priority;
+  subtasks?: Subtask[];
 }
 
 export interface Project {
@@ -45,4 +56,16 @@ export const STATUS_LABELS: Record<TaskStatus, string> = {
   [TaskStatus.IN_PROGRESS]: 'In Progress',
   [TaskStatus.REVIEW]: 'Review',
   [TaskStatus.DONE]: 'Done',
+};
+
+export const PRIORITY_LABELS: Record<NonNullable<Priority>, string> = {
+  HIGH: 'High',
+  MEDIUM: 'Medium',
+  LOW: 'Low',
+};
+
+export const PRIORITY_COLORS: Record<NonNullable<Priority>, string> = {
+  HIGH: 'bg-red-500/20 text-red-300 border-red-500/30',
+  MEDIUM: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+  LOW: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
 };

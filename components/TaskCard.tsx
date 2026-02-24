@@ -1,7 +1,7 @@
 import React from 'react';
-import { Task, INITIAL_TAGS } from '../types';
+import { Task, PRIORITY_COLORS } from '../types';
 import { useTaskContext } from '../context/TaskContext';
-import { Clock, CheckCircle2, MoreVertical, Play, Pause } from 'lucide-react';
+import { Play, Pause, Calendar, ListChecks, Flag } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '../utils/cn';
 
@@ -18,6 +18,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = f
   
   const isActive = activeTaskId === task.id;
   const project = projects.find(p => p.id === task.projectId);
+
+  const isOverdue = task.dueDate && task.dueDate < Date.now();
+  const completedSubtasks = task.subtasks?.filter(s => s.completed).length ?? 0;
+  const totalSubtasks = task.subtasks?.length ?? 0;
+  const hasSubtasks = totalSubtasks > 0;
 
   const handleDragStart = (e: any) => {
     e.dataTransfer.setData('taskId', task.id);
@@ -77,8 +82,14 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = f
       </div>
 
       {/* Tags & Meta */}
-      <div className={cn("flex items-center gap-2", isListMode ? "shrink-0" : "justify-between w-full mt-auto pt-2")}>
+      <div className={cn("flex items-center gap-2 flex-wrap", isListMode ? "shrink-0" : "justify-between w-full mt-auto pt-2")}>
         <div className="flex items-center gap-1.5 flex-wrap">
+          {task.priority && (
+            <span className={cn("text-[10px] px-1.5 py-0.5 rounded border flex items-center gap-1", PRIORITY_COLORS[task.priority])}>
+              <Flag size={10} />
+              {task.priority}
+            </span>
+          )}
           {task.tags.map(tag => (
             <span key={tag.id} className={cn("text-[10px] px-1.5 py-0.5 rounded border", tag.color)}>
               {tag.name}
@@ -86,18 +97,19 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = f
           ))}
         </div>
         
-        {isListMode && (
-           <button 
-             onClick={(e) => { e.stopPropagation(); setActiveTask(isActive ? null : task.id); }}
-             className={cn("p-2 rounded-full transition-colors mx-2", isActive ? "text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-500/10" : "text-slate-400 dark:text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700")}
-           >
-             {isActive ? <Pause size={16} /> : <Play size={16} />}
-           </button>
-        )}
-
-        <div className="text-slate-400 dark:text-slate-500 flex items-center gap-1 text-xs">
-           <Clock size={12} />
-           <span>{new Date(task.updatedAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric'})}</span>
+        <div className="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
+          {task.dueDate && (
+            <span className={cn("flex items-center gap-1", isOverdue && "text-red-500 font-medium")}>
+              <Calendar size={12} />
+              {new Date(task.dueDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric'})}
+            </span>
+          )}
+          {hasSubtasks && (
+            <span className={cn("flex items-center gap-1", completedSubtasks === totalSubtasks && totalSubtasks > 0 && "text-emerald-500")}>
+              <ListChecks size={12} />
+              {completedSubtasks}/{totalSubtasks}
+            </span>
+          )}
         </div>
       </div>
     </motion.div>

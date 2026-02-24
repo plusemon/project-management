@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Task, TaskStatus, Tag, INITIAL_TAGS, Project } from '../types';
+import { Task, TaskStatus, Tag, INITIAL_TAGS, Subtask, Priority } from '../types';
 import { useTaskContext } from '../context/TaskContext';
-import { X, Save, Trash2, Tag as TagIcon, Hash } from 'lucide-react';
+import { X, Save, Trash2, Tag as TagIcon } from 'lucide-react';
 import { cn } from '../utils/cn';
 import ReactMarkdown from 'react-markdown';
 import { ConfirmationModal } from './ConfirmationModal';
+import { DatePicker } from './DatePicker';
+import { PrioritySelect } from './PrioritySelect';
+import { SubtaskList } from './SubtaskList';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -23,6 +26,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
   const [projectId, setProjectId] = useState<string>('');
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [dueDate, setDueDate] = useState<number | null>(null);
+  const [priority, setPriority] = useState<Priority>(null);
+  const [subtasks, setSubtasks] = useState<Subtask[]>([]);
 
   useEffect(() => {
     if (taskToEdit) {
@@ -31,6 +37,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
       setStatus(taskToEdit.status);
       setSelectedTags(taskToEdit.tags);
       setProjectId(taskToEdit.projectId || '');
+      setDueDate(taskToEdit.dueDate ?? null);
+      setPriority(taskToEdit.priority ?? null);
+      setSubtasks(taskToEdit.subtasks ?? []);
     } else {
       resetForm();
       if (initialStatus) setStatus(initialStatus);
@@ -43,6 +52,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
     setStatus(TaskStatus.BACKLOG);
     setSelectedTags([]);
     setProjectId('');
+    setDueDate(null);
+    setPriority(null);
+    setSubtasks([]);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -55,7 +67,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
         description,
         status,
         tags: selectedTags,
-        projectId: projectId || undefined
+        projectId: projectId || undefined,
+        dueDate: dueDate ?? undefined,
+        priority: priority ?? undefined,
+        subtasks: subtasks.length > 0 ? subtasks : undefined
       });
     } else {
       addTask({
@@ -63,7 +78,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
         description,
         status,
         tags: selectedTags,
-        projectId: projectId || undefined
+        projectId: projectId || undefined,
+        dueDate: dueDate ?? undefined,
+        priority: priority ?? undefined,
+        subtasks: subtasks.length > 0 ? subtasks : undefined
       });
     }
     onClose();
@@ -142,6 +160,10 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
                 </select>
               </div>
 
+              <DatePicker value={dueDate} onChange={setDueDate} />
+
+              <PrioritySelect value={priority} onChange={setPriority} />
+
               <div className="flex flex-col gap-1.5">
                 <label className="text-slate-500 text-xs font-semibold uppercase">Project</label>
                 <div className="flex items-center gap-2">
@@ -190,6 +212,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
                 })}
               </div>
             </div>
+
+            {/* Subtasks */}
+            <SubtaskList subtasks={subtasks} onChange={setSubtasks} />
 
             {/* Description / Markdown Editor */}
             <div className="space-y-2">
