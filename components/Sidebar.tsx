@@ -175,7 +175,7 @@ export const Sidebar: React.FC = () => {
             {sidebarOpen && isCreatingProject && (
               <form onSubmit={handleCreateProject} className="px-2 mb-2">
                   <input
-                      autoFocus
+                      
                       type="text"
                       value={newProjectName}
                       onChange={(e) => setNewProjectName(e.target.value)}

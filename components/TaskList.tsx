@@ -67,7 +67,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onEditTask }) => {
       </AnimatePresence>
       {sortedTasks.length === 0 && (
          <div className="text-center text-slate-500 py-20">
-            No tasks found. Press 'N' to create one.
+            No tasks found. Press &#39;N&#39; to create one.
          </div>
       )}
     </div>

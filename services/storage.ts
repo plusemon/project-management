@@ -50,12 +50,6 @@ const INITIAL_PROJECTS: Project[] = [
   { id: 'p3', name: 'Design System', color: 'text-pink-400' },
 ];
 
-// Check if Firebase is configured
-const isFirebaseConfigured = (): boolean => {
-  const config = (window as unknown as { __firebaseConfig?: { apiKey: string } }).__firebaseConfig;
-  return config?.apiKey && config.apiKey !== "YOUR_API_KEY";
-};
-
 export const storageService = {
   // Tasks
   getTasks: async (user: User | null): Promise<Task[]> => {
@@ -72,7 +66,7 @@ export const storageService = {
       // Also keep local backup
       localStorage.setItem('devfocus_tasks', JSON.stringify(tasks));
       return tasks;
-    } catch (e) {
+    } catch {
       console.warn('Firebase unavailable, using localStorage fallback');
       // Fallback to localStorage
       const data = localStorage.getItem('devfocus_tasks');
@@ -166,7 +160,7 @@ export const storageService = {
       const projects = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Project));
       localStorage.setItem('devfocus_projects', JSON.stringify(projects));
       return projects;
-    } catch (e) {
+    } catch {
       console.warn('Firebase unavailable, using localStorage fallback');
       const data = localStorage.getItem('devfocus_projects');
       return data ? JSON.parse(data) : INITIAL_PROJECTS;
@@ -229,7 +223,7 @@ export const storageService = {
         const data = localStorage.getItem('devfocus_tasks');
         callback(data ? JSON.parse(data) : []);
       });
-    } catch (e) {
+    } catch {
       console.warn('Firebase unavailable, using localStorage');
       const data = localStorage.getItem('devfocus_tasks');
       callback(data ? JSON.parse(data) : []);
@@ -257,7 +251,7 @@ export const storageService = {
         const data = localStorage.getItem('devfocus_projects');
         callback(data ? JSON.parse(data) : INITIAL_PROJECTS);
       });
-    } catch (e) {
+    } catch {
       console.warn('Firebase unavailable, using localStorage');
       const data = localStorage.getItem('devfocus_projects');
       callback(data ? JSON.parse(data) : INITIAL_PROJECTS);

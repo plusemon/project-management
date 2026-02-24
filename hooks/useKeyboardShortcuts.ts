@@ -7,9 +7,7 @@ interface ShortcutsProps {
 export const useKeyboardShortcuts = ({ onNewTask }: ShortcutsProps) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if inside an input or textarea
       if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) {
-        // Allow Escape to blur inputs
         if (e.key === 'Escape') {
           (e.target as HTMLElement).blur();
         }
@@ -21,11 +19,12 @@ export const useKeyboardShortcuts = ({ onNewTask }: ShortcutsProps) => {
           e.preventDefault();
           onNewTask();
           break;
-        case '/':
+        case '/': {
           e.preventDefault();
           const searchInput = document.getElementById('search-input');
           if (searchInput) searchInput.focus();
           break;
+        }
         default:
           break;
       }

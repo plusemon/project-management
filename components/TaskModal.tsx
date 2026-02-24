@@ -141,14 +141,13 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
                 onChange={(e) => setTitle(e.target.value)}
                 placeholder="Task title"
                 className="w-full bg-transparent text-2xl font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none"
-                autoFocus
               />
             </div>
 
             {/* Meta Controls */}
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="flex flex-col gap-1.5">
-                <label className="text-slate-500 text-xs font-semibold uppercase">Status</label>
+                <span className="text-slate-500 text-xs font-semibold uppercase">Status</span>
                 <select 
                   value={status} 
                   onChange={(e) => setStatus(e.target.value as TaskStatus)}
@@ -165,7 +164,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
               <PrioritySelect value={priority} onChange={setPriority} />
 
               <div className="flex flex-col gap-1.5">
-                <label className="text-slate-500 text-xs font-semibold uppercase">Project</label>
+                <span className="text-slate-500 text-xs font-semibold uppercase">Project</span>
                 <div className="flex items-center gap-2">
                   {projects.map(p => (
                     <button
@@ -188,9 +187,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
 
             {/* Tags */}
             <div className="space-y-2">
-              <label className="text-slate-500 text-xs font-semibold uppercase flex items-center gap-2">
+              <span className="text-slate-500 text-xs font-semibold uppercase flex items-center gap-2">
                 <TagIcon size={12} /> Tags
-              </label>
+              </span>
               <div className="flex flex-wrap gap-2">
                 {INITIAL_TAGS.map(tag => {
                   const isSelected = selectedTags.some(t => t.id === tag.id);
@@ -219,7 +218,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
             {/* Description / Markdown Editor */}
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <label className="text-slate-500 text-xs font-semibold uppercase">Description (Markdown)</label>
+                <span className="text-slate-500 text-xs font-semibold uppercase">Description (Markdown)</span>
                 <button 
                   type="button"
                   onClick={() => setIsPreviewMode(!isPreviewMode)}

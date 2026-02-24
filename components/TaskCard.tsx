@@ -24,7 +24,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = f
   const totalSubtasks = task.subtasks?.length ?? 0;
   const hasSubtasks = totalSubtasks > 0;
 
-  const handleDragStart = (e: any) => {
+  const handleDragStart = (e: React.DragEvent) => {
     e.dataTransfer.setData('taskId', task.id);
     e.dataTransfer.effectAllowed = 'move';
     onDragStart?.(e);

@@ -13,7 +13,6 @@ export const Header: React.FC = () => {
     toggleSidebar, 
     user, 
     isLoading,
-    isSynced,
     syncStatus,
     pendingSyncCount,
     signIn,

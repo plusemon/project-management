@@ -88,6 +88,11 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setSidebarOpen(true);
         }
     };
+    
+    window.addEventListener('resize', handleResize);
+    handleResize(); // Initial check
+    
+    return () => window.removeEventListener('resize', handleResize);
   }, []);
 
   useEffect(() => {
@@ -202,7 +207,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         // Insert between tasks - use average of surrounding orders
         const prevTask = sameStatusTasks[newOrder - 1];
         if (prevTask) {
-          finalOrder = (prevTask.order ?? prevTask.createdAt + targetTask.order ?? targetTask.createdAt) / 2;
+          finalOrder = ((prevTask.order ?? prevTask.createdAt) + (targetTask.order ?? targetTask.createdAt)) / 2;
         } else {
           finalOrder = (targetTask.order ?? targetTask.createdAt) - 1000;
         }

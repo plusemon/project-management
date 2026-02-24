@@ -31,9 +31,10 @@ let isOnline = navigator.onLine;
 let syncIntervalId: ReturnType<typeof setInterval> | null = null;
 let callbacks: SyncCallbacks = {};
 let currentUser: User | null = null;
-let isSyncing = false;
+const isSyncing = false;
 let unsubscribes: Unsubscribe[] = [];
 let hasRealtimeListeners = false;
+let isProcessSyncQueueLocked = false;
 
 const getUserId = (user: User | null): string => {
   if (user) return user.uid;
@@ -55,8 +56,8 @@ const processSyncQueue = async (): Promise<void> => {
   if (!isOnline || !currentUser) return;
   
   // Use a promise lock to prevent concurrent processing
-  if ((processSyncQueue as any).locked) return;
-  (processSyncQueue as any).locked = true;
+  if (isProcessSyncQueueLocked) return;
+  isProcessSyncQueueLocked = true;
   
   try {
     const queue = await indexedDBService.getSyncQueue();
@@ -96,7 +97,7 @@ const processSyncQueue = async (): Promise<void> => {
         console.log('[Sync] Successfully synced:', item.type, item.action);
       } catch (error) {
         console.error('[Sync] Error syncing item:', error);
-        if ((error as any)?.code === 'unavailable' || (error as any)?.message?.includes('offline')) {
+        if (error instanceof Error && (error.message.includes('offline') || (error as unknown as { code?: string }).code === 'unavailable')) {
           updateStatus('offline');
           break;
         }
@@ -119,7 +120,7 @@ const processSyncQueue = async (): Promise<void> => {
       updateStatus('idle');
     }
   } finally {
-    (processSyncQueue as any).locked = false;
+    isProcessSyncQueueLocked = false;
   }
 };
 
@@ -331,7 +332,7 @@ export const syncService = {
     
     if (task) {
       await indexedDBService.saveTask(task);
-    } else if (action === 'delete' && task) {
+    } else if (action === 'delete') {
       await indexedDBService.deleteTask(task.id);
     }
     
@@ -363,7 +364,7 @@ export const syncService = {
     
     if (project) {
       await indexedDBService.saveProject(project);
-    } else if (action === 'delete' && project) {
+    } else if (action === 'delete') {
       await indexedDBService.deleteProject(project.id);
     }
     

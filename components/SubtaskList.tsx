@@ -44,9 +44,9 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({ subtasks, onChange }) 
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
-        <label className="text-slate-500 text-xs font-semibold uppercase">
+                  <span className="text-slate-500 text-xs font-semibold uppercase">
           Subtasks
-        </label>
+                  </span>
         {totalCount > 0 && (
           <span className="text-xs text-slate-400">
             {completedCount}/{totalCount} completed

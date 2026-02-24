@@ -1,5 +1,5 @@
 import React from 'react';
-import { Priority, PRIORITY_LABELS, PRIORITY_COLORS } from '../types';
+import { Priority, PRIORITY_COLORS } from '../types';
 import { cn } from '../utils/cn';
 
 interface PrioritySelectProps {
@@ -17,9 +17,9 @@ const PRIORITY_OPTIONS: Array<{ value: Priority; label: string }> = [
 export const PrioritySelect: React.FC<PrioritySelectProps> = ({ value, onChange }) => {
   return (
     <div className="flex flex-col gap-1.5">
-      <label className="text-slate-500 text-xs font-semibold uppercase">
+      <span className="text-slate-500 text-xs font-semibold uppercase">
         Priority
-      </label>
+      </span>
       <div className="flex flex-wrap gap-2">
         {PRIORITY_OPTIONS.map((option) => {
           const isSelected = value === option.value;
