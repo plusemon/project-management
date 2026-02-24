@@ -9,20 +9,20 @@ interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   isListMode?: boolean;
+  onDragStart?: (e: React.DragEvent) => void;
+  isDragging?: boolean;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = false }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = false, onDragStart, isDragging = false }) => {
   const { activeTaskId, setActiveTask, projects } = useTaskContext();
   
   const isActive = activeTaskId === task.id;
   const project = projects.find(p => p.id === task.projectId);
 
-  // Fix: Framer Motion's onDragStart type conflicts with React's native DragEvent.
-  // We use 'any' here to bypass the type check, as we know we're using native drag-and-drop behavior
-  // because 'draggable' is set to true and 'drag' prop (framer motion) is not set.
   const handleDragStart = (e: any) => {
     e.dataTransfer.setData('taskId', task.id);
     e.dataTransfer.effectAllowed = 'move';
+    onDragStart?.(e);
   };
 
   return (
@@ -39,6 +39,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = f
         isActive 
             ? "border-indigo-500 ring-1 ring-indigo-500/20" 
             : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600",
+        isDragging && "opacity-50",
         isListMode ? "flex items-center gap-4" : "flex flex-col gap-3"
       )}
       onClick={() => onEdit(task)}

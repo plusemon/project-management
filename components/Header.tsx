@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTaskContext } from '../context/TaskContext';
 import { useTimer } from '../hooks/useTimer';
-import { Search, Play, Pause, RotateCcw, Coffee, Menu, Cloud, CloudOff, LogIn, LogOut, Loader2 } from 'lucide-react';
+import { Search, Play, Pause, RotateCcw, Coffee, Menu, Cloud, CloudOff, LogIn, LogOut, Loader2, RefreshCw } from 'lucide-react';
 import { cn } from '../utils/cn';
 
 export const Header: React.FC = () => {
@@ -14,6 +14,8 @@ export const Header: React.FC = () => {
     user, 
     isLoading,
     isSynced,
+    syncStatus,
+    pendingSyncCount,
     signIn,
     signOut
   } = useTaskContext();
@@ -61,13 +63,18 @@ export const Header: React.FC = () => {
       {/* Right - Timer & Auth */}
       <div className="flex items-center gap-2 sm:gap-4 pl-2">
         {/* Sync Status */}
-        <div className="hidden sm:flex items-center gap-1.5 text-xs" title={isSynced ? 'Synced with cloud' : 'Local mode'}>
-          {isLoading ? (
-            <Loader2 size={14} className="animate-spin text-slate-400" />
-          ) : isSynced ? (
+        <div className="hidden sm:flex items-center gap-1.5 text-xs" title={syncStatus === 'idle' ? 'Synced with cloud' : syncStatus === 'syncing' ? 'Syncing...' : syncStatus === 'offline' ? 'Offline - changes saved locally' : 'Not synced'}>
+          {isLoading || syncStatus === 'syncing' ? (
+            <RefreshCw size={14} className="animate-spin text-indigo-500" />
+          ) : syncStatus === 'idle' ? (
             <Cloud size={14} className="text-emerald-500" />
+          ) : syncStatus === 'offline' ? (
+            <CloudOff size={14} className="text-amber-500" />
           ) : (
             <CloudOff size={14} className="text-slate-400" />
+          )}
+          {pendingSyncCount > 0 && (
+            <span className="text-amber-500">{pendingSyncCount}</span>
           )}
         </div>
 

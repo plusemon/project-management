@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { TaskStatus, STATUS_LABELS, Task } from '../types';
 import { useTaskContext } from '../context/TaskContext';
 import { TaskCard } from './TaskCard';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import { Plus } from 'lucide-react';
 
 interface TaskBoardProps {
@@ -11,20 +11,59 @@ interface TaskBoardProps {
 }
 
 export const TaskBoard: React.FC<TaskBoardProps> = ({ onEditTask, onNewTask }) => {
-  const { filteredTasks, moveTask } = useTaskContext();
+  const { filteredTasks, moveTask, reorderTask } = useTaskContext();
+  const [dragInfo, setDragInfo] = useState<{ taskId: string; sourceStatus: TaskStatus } | null>(null);
+  const [dropTarget, setDropTarget] = useState<{ status: TaskStatus; index: number } | null>(null);
 
-  const getTasksByStatus = (status: TaskStatus) => filteredTasks.filter(t => t.status === status);
+  const getTasksByStatus = (status: TaskStatus) => {
+    return filteredTasks
+      .filter(t => t.status === status)
+      .sort((a, b) => {
+        // Sort by order if available, otherwise by createdAt
+        const orderA = a.order ?? a.createdAt;
+        const orderB = b.order ?? b.createdAt;
+        return orderA - orderB;
+      });
+  };
 
-  const handleDrop = (e: React.DragEvent, status: TaskStatus) => {
+  const handleDragStart = (e: React.DragEvent, task: Task) => {
+    setDragInfo({ taskId: task.id, sourceStatus: task.status });
+    e.dataTransfer.setData('taskId', task.id);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDrop = (e: React.DragEvent, targetStatus: TaskStatus, targetIndex: number) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData('taskId');
-    if (taskId) {
-      moveTask(taskId, status);
+    
+    if (taskId && dragInfo) {
+      if (dragInfo.sourceStatus === targetStatus) {
+        // Reorder within same column
+        reorderTask(taskId, targetIndex);
+      } else {
+        // Move to different column
+        moveTask(taskId, targetStatus);
+      }
     }
+    setDragInfo(null);
+    setDropTarget(null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault(); 
+  };
+
+  const handleTaskDragOver = (e: React.DragEvent, status: TaskStatus, index: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect = 'move';
+    if (dragInfo && dragInfo.sourceStatus === status) {
+      setDropTarget({ status, index });
+    }
+  };
+
+  const handleTaskDragLeave = () => {
+    setDropTarget(null);
   };
 
   return (
@@ -33,7 +72,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ onEditTask, onNewTask }) =
         <div 
           key={status} 
           className="flex-shrink-0 w-72 sm:w-80 flex flex-col h-full max-h-full snap-center bg-slate-50/50 dark:bg-slate-900/50 rounded-xl border border-slate-200 dark:border-slate-800/50 transition-colors duration-200"
-          onDrop={(e) => handleDrop(e, status)}
+          onDrop={(e) => handleDrop(e, status, getTasksByStatus(status).length)}
           onDragOver={handleDragOver}
         >
           {/* Column Header */}
@@ -60,20 +99,58 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ onEditTask, onNewTask }) =
           </div>
 
           {/* Task List Container */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-[150px] scrollbar-hide">
+          <div 
+            className="flex-1 overflow-y-auto p-3 space-y-3 min-h-[150px] scrollbar-hide"
+            onDrop={(e) => handleDrop(e, status, getTasksByStatus(status).length)}
+            onDragOver={handleDragOver}
+          >
             <AnimatePresence mode='popLayout'>
-              {getTasksByStatus(status).map(task => (
-                <TaskCard 
-                  key={task.id} 
-                  task={task} 
-                  onEdit={onEditTask} 
-                />
+              {getTasksByStatus(status).map((task, index) => (
+                <div key={task.id} className="space-y-3">
+                  {dragInfo && dragInfo.sourceStatus === status && dropTarget?.status === status && dropTarget?.index === index && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="border-2 border-dashed border-indigo-400 dark:border-indigo-500 rounded-lg py-4 flex items-center justify-center text-indigo-500 dark:text-indigo-400 text-sm font-medium bg-indigo-50 dark:bg-indigo-500/10"
+                    >
+                      Drop task here
+                    </motion.div>
+                  )}
+                  <div
+                    onDragOver={(e) => handleTaskDragOver(e, status, index)}
+                    onDragLeave={handleTaskDragLeave}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleDrop(e, status, index);
+                    }}
+                  >
+                    <TaskCard 
+                      task={task} 
+                      onEdit={onEditTask}
+                      onDragStart={(e) => handleDragStart(e, task)}
+                      isDragging={dragInfo?.taskId === task.id}
+                    />
+                  </div>
+                </div>
               ))}
             </AnimatePresence>
             {getTasksByStatus(status).length === 0 && (
               <div className="h-24 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-lg flex items-center justify-center text-slate-400 dark:text-slate-600 text-xs transition-colors duration-200">
                 Drop tasks here
               </div>
+            )}
+            {dragInfo && dragInfo.sourceStatus === status && getTasksByStatus(status).length > 0 && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                onDragOver={(e) => handleTaskDragOver(e, status, getTasksByStatus(status).length)}
+                onDrop={(e) => handleDrop(e, status, getTasksByStatus(status).length)}
+                className="border-2 border-dashed border-indigo-400 dark:border-indigo-500 rounded-lg py-4 flex items-center justify-center text-indigo-500 dark:text-indigo-400 text-sm font-medium bg-indigo-50 dark:bg-indigo-500/10"
+              >
+                Drop task here
+              </motion.div>
             )}
           </div>
         </div>

@@ -13,6 +13,7 @@ export const TaskList: React.FC<TaskListProps> = ({ onEditTask }) => {
   const { filteredTasks, moveTask } = useTaskContext();
 
   // Sort: In Progress first, then Backlog, Review, Done last
+  // Within same status, sort by custom order or createdAt
   const sortedTasks = [...filteredTasks].sort((a, b) => {
     const score = (s: TaskStatus) => {
       if (s === TaskStatus.IN_PROGRESS) return 3;
@@ -20,7 +21,13 @@ export const TaskList: React.FC<TaskListProps> = ({ onEditTask }) => {
       if (s === TaskStatus.BACKLOG) return 1;
       return 0;
     };
-    return score(b.status) - score(a.status);
+    const statusDiff = score(b.status) - score(a.status);
+    if (statusDiff !== 0) return statusDiff;
+    
+    // Within same status, sort by order (custom order) then by createdAt
+    const orderA = a.order ?? a.createdAt;
+    const orderB = b.order ?? b.createdAt;
+    return orderA - orderB;
   });
 
   const handleToggleDone = (task: Task) => {

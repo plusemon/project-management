@@ -7,10 +7,10 @@ import { TaskList } from './components/TaskList';
 import { TaskModal } from './components/TaskModal';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { Task, TaskStatus } from './types';
+import LoginScreen from './components/LoginScreen';
 
-// Wrapper component to access context
 const DevFocusApp: React.FC = () => {
-  const { viewMode } = useTaskContext();
+  const { viewMode, user, isLoading } = useTaskContext();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [initialStatus, setInitialStatus] = useState<TaskStatus | undefined>(undefined);
@@ -29,6 +29,18 @@ const DevFocusApp: React.FC = () => {
   useKeyboardShortcuts({
     onNewTask: () => handleNewTask(),
   });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+        <div className="w-8 h-8 border-3 border-indigo-500 border-t-transparent rounded-full animate-spin"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <LoginScreen />;
+  }
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-200 overflow-hidden font-sans selection:bg-indigo-500/30 transition-colors duration-200">

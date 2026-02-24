@@ -20,12 +20,15 @@ export interface Task {
   createdAt: number;
   updatedAt: number;
   projectId?: string;
+  locallyModified?: boolean;
+  order?: number; // For manual ordering within same status
 }
 
 export interface Project {
   id: string;
   name: string;
   color: string;
+  updatedAt?: number;
 }
 
 export type ViewMode = 'KANBAN' | 'LIST';

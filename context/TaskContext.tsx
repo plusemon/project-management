@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { Task, Project, TaskStatus, ViewMode } from '../types';
+import { syncService } from '../services/syncService';
 import { storageService } from '../services/storage';
 import { generateId } from '../utils/cn';
 import { User } from 'firebase/auth';
 
 type Theme = 'light' | 'dark';
+type SyncStatus = 'idle' | 'syncing' | 'error' | 'offline' | 'unauthenticated';
 
 interface TaskContextType {
   tasks: Task[];
@@ -19,11 +21,14 @@ interface TaskContextType {
   user: User | null;
   isLoading: boolean;
   isSynced: boolean;
+  syncStatus: SyncStatus;
+  pendingSyncCount: number;
   
   addTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
   deleteTask: (id: string) => void;
   moveTask: (id: string, status: TaskStatus) => void;
+  reorderTask: (taskId: string, newOrder: number) => void;
   
   addProject: (project: Omit<Project, 'id'>) => void;
   deleteProject: (id: string) => void;
@@ -43,7 +48,6 @@ interface TaskContextType {
 const TaskContext = createContext<TaskContextType | undefined>(undefined);
 
 export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  // Initialize state with localStorage data first (for faster initial render)
   const [tasks, setTasks] = useState<Task[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   
@@ -51,22 +55,20 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   
-  // Responsive sidebar init: Closed on mobile (< 768px), Open on desktop
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
   const [selectedProjectId, setSelectedProject] = useState<string | null>(null);
 
-  // Theme State
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('theme');
     return (saved === 'light' || saved === 'dark') ? saved : 'dark';
   });
 
-  // Auth state
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSynced, setIsSynced] = useState(false);
+  const [syncStatus, setSyncStatus] = useState<SyncStatus>('unauthenticated');
+  const [pendingSyncCount, setPendingSyncCount] = useState(0);
 
-  // Apply Theme
   useEffect(() => {
     const root = window.document.documentElement;
     root.classList.remove('light', 'dark');
@@ -78,7 +80,6 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
   };
 
-  // Handle Resize
   useEffect(() => {
     const handleResize = () => {
         if (window.innerWidth < 768) {
@@ -87,32 +88,23 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
             setSidebarOpen(true);
         }
     };
-    // Only run once on mount to set initial correct state based on width if needed, 
-    // but not actively listening to resize to avoid annoying auto-closing during window resizing
   }, []);
 
-  // Authentication effect - try anonymous sign-in for sync, fall back to localStorage
   useEffect(() => {
     const unsubscribe = storageService.onAuthChange(async (authUser) => {
       if (authUser) {
         setUser(authUser);
+        setSyncStatus('idle');
       } else {
-        // Try anonymous sign-in to enable Firestore sync
-        // This requires Anonymous Authentication to be enabled in Firebase Console
-        try {
-          await storageService.signInAnonymously();
-        } catch (e) {
-          console.warn('Anonymous auth not enabled - using local storage only');
-          // Load from localStorage as fallback
-          const localTasks = localStorage.getItem('devfocus_tasks');
-          if (localTasks) {
-            setTasks(JSON.parse(localTasks));
-          }
-          const localProjects = localStorage.getItem('devfocus_projects');
-          if (localProjects) {
-            setProjects(JSON.parse(localProjects));
-          }
-          setIsSynced(false);
+        setUser(null);
+        setSyncStatus('unauthenticated');
+        const localTasks = localStorage.getItem('devfocus_tasks');
+        if (localTasks) {
+          setTasks(JSON.parse(localTasks));
+        }
+        const localProjects = localStorage.getItem('devfocus_projects');
+        if (localProjects) {
+          setProjects(JSON.parse(localProjects));
         }
       }
       setIsLoading(false);
@@ -121,52 +113,34 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => unsubscribe();
   }, []);
 
-  // Real-time sync effect for tasks
   useEffect(() => {
-    let unsubscribe: (() => void) | null = null;
-    
-    const setupSync = async () => {
-      unsubscribe = storageService.subscribeToTasks(user, (syncedTasks) => {
+    if (!user) return;
+
+    syncService.on({
+      onStatusChange: (status) => {
+        setSyncStatus(status);
+        setIsSynced(status === 'idle');
+      },
+      onTasksSync: (syncedTasks) => {
         setTasks(syncedTasks);
-        setIsSynced(true);
-      });
-    };
-    
-    setupSync();
-    
-    return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
-    };
-  }, [user]);
-
-  // Real-time sync effect for projects
-  useEffect(() => {
-    let unsubscribe: (() => void) | null = null;
-    
-    const setupSync = async () => {
-      unsubscribe = storageService.subscribeToProjects(user, (syncedProjects) => {
+        localStorage.setItem('devfocus_tasks', JSON.stringify(syncedTasks));
+      },
+      onProjectsSync: (syncedProjects) => {
+        console.log('[Context] onProjectsSync received, count:', syncedProjects.length, 'ids:', syncedProjects.map(p => p.id));
         setProjects(syncedProjects);
-      });
-    };
-    
-    setupSync();
-    
+        localStorage.setItem('devfocus_projects', JSON.stringify(syncedProjects));
+      },
+      onQueueCountChange: (count) => {
+        setPendingSyncCount(count);
+      },
+    });
+
+    const cleanup = syncService.initialize(user);
+
     return () => {
-      if (unsubscribe) {
-        unsubscribe();
-      }
+      cleanup.then(fn => fn());
     };
   }, [user]);
-
-  // Sync to Firebase when tasks change (for offline support)
-  useEffect(() => {
-    if (isSynced && tasks.length > 0) {
-      // Only save when we've received initial sync
-      storageService.saveAllTasks(tasks, user);
-    }
-  }, [tasks, user, isSynced]);
 
   const filteredTasks = useMemo(() => {
     const safeTasks = Array.isArray(tasks) ? tasks : [];
@@ -188,62 +162,99 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       createdAt: Date.now(),
       updatedAt: Date.now(),
     };
-    // Optimistic update
     setTasks((prev) => [newTask, ...prev]);
-    // Save to Firebase
-    storageService.saveTask(newTask, user);
-  }, [user]);
+    syncService.queueTaskChange('create', newTask);
+  }, []);
 
   const updateTask = useCallback((id: string, updates: Partial<Task>) => {
     setTasks((prev) => prev.map(t => t.id === id ? { ...t, ...updates, updatedAt: Date.now() } : t));
-    // Find the task and save to Firebase
     const task = tasks.find(t => t.id === id);
     if (task) {
-      storageService.saveTask({ ...task, ...updates, updatedAt: Date.now() }, user);
+      syncService.queueTaskChange('update', { ...task, ...updates, updatedAt: Date.now() });
     }
-  }, [tasks, user]);
+  }, [tasks]);
 
   const deleteTask = useCallback((id: string) => {
     setTasks((prev) => prev.filter(t => t.id !== id));
     if (activeTaskId === id) setActiveTaskId(null);
-    storageService.deleteTask(id, user);
-  }, [user, activeTaskId]);
+    syncService.queueTaskChange('delete', { id } as Task);
+  }, [activeTaskId]);
 
   const moveTask = useCallback((id: string, status: TaskStatus) => {
     updateTask(id, { status });
   }, [updateTask]);
 
+  const reorderTask = useCallback((taskId: string, newOrder: number) => {
+    setTasks(prev => {
+      const task = prev.find(t => t.id === taskId);
+      if (!task) return prev;
+      
+      // Get tasks with same status (excluding the task being moved)
+      const sameStatusTasks = prev
+        .filter(t => t.status === task.status && t.id !== taskId)
+        .sort((a, b) => (a.order ?? a.createdAt) - (b.order ?? b.createdAt));
+      
+      // Find the new order value for the target position
+      const targetTask = sameStatusTasks[newOrder];
+      let finalOrder: number;
+      
+      if (targetTask) {
+        // Insert between tasks - use average of surrounding orders
+        const prevTask = sameStatusTasks[newOrder - 1];
+        if (prevTask) {
+          finalOrder = (prevTask.order ?? prevTask.createdAt + targetTask.order ?? targetTask.createdAt) / 2;
+        } else {
+          finalOrder = (targetTask.order ?? targetTask.createdAt) - 1000;
+        }
+      } else {
+        // Moving to end - use a value after the last task
+        const lastTask = sameStatusTasks[sameStatusTasks.length - 1];
+        finalOrder = lastTask ? (lastTask.order ?? lastTask.createdAt) + 1000 : Date.now();
+      }
+      
+      const updatedTasks = prev.map(t => {
+        if (t.id === taskId) {
+          return { ...t, order: finalOrder, updatedAt: Date.now() };
+        }
+        return t;
+      });
+      
+      // Sync only the moved task
+      const reorderedTask = updatedTasks.find(t => t.id === taskId);
+      if (reorderedTask) {
+        syncService.queueTaskChange('update', reorderedTask);
+      }
+      
+      return updatedTasks;
+    });
+  }, []);
+
   const addProject = useCallback((projectData: Omit<Project, 'id'>) => {
     const newProject: Project = {
         ...projectData,
-        id: generateId()
+        id: generateId(),
+        updatedAt: Date.now(),
     };
+    console.log('[Context] addProject called:', newProject.id);
     setProjects(prev => [...prev, newProject]);
-    storageService.saveProject(newProject, user);
-  }, [user]);
+    syncService.queueProjectChange('create', newProject);
+  }, []);
 
   const deleteProject = useCallback((id: string) => {
     setProjects(prev => prev.filter(p => p.id !== id));
     if (selectedProjectId === id) setSelectedProject(null);
-    storageService.deleteProject(id, user);
-  }, [user, selectedProjectId]);
+    syncService.queueProjectChange('delete', { id } as Project);
+  }, [selectedProjectId]);
 
   const toggleSidebar = () => setSidebarOpen(prev => !prev);
 
-  // Authentication methods
   const signIn = async () => {
     await storageService.signInWithGoogle();
   };
 
   const signOut = async () => {
     await storageService.signOut();
-    // Re-sign in anonymously to maintain sync
-    try {
-      await storageService.signInAnonymously();
-    } catch (e) {
-      console.warn('Could not re-establish anonymous session');
-      setIsSynced(false);
-    }
+    syncService.disconnect();
   };
 
   return (
@@ -260,10 +271,13 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       user,
       isLoading,
       isSynced,
+      syncStatus,
+      pendingSyncCount,
       addTask,
       updateTask,
       deleteTask,
       moveTask,
+      reorderTask,
       addProject,
       deleteProject,
       setSelectedProject,
