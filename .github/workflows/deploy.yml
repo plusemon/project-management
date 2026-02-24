@@ -1,40 +1,110 @@
-name: FTP Deploy Workflow
+name: CI/CD Pipeline
 
 on:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 
 jobs:
-  deploy:
+  quality:
     runs-on: ubuntu-latest
     steps:
-      - name: 🚚 Shallow Clone the repo
+      - name: 🚚 Checkout Repository
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
 
-      # Setup Node
-      - name: ⚡ Node Setup
-        uses: actions/setup-node@v3
+      - name: ⚡ Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: '22'
+          cache: 'npm'
 
-      # Build Backend Assets
-      - name: 📦 Install  Dependencies
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci --prefer-offline
-          else
-            npm install --prefer-offline
-          fi
+      - name: 📦 Install Dependencies
+        run: npm ci --prefer-offline
 
-      - name: 🛠️ Build Assets
+      - name: 🔍 Run Linter
+        run: npm run lint
+
+      - name: 🔍 Run Type Check
+        run: npx tsc --noEmit
+
+      - name: 🔒 Security Audit
+        run: npm audit --audit-level=moderate
+
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: ⚡ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci --prefer-offline
+
+      - name: 🧪 Run Tests
+        run: npm run test
+        env:
+          GEMINI_API_KEY: dummy_key_for_ci
+
+      - name: 📊 Upload Coverage
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: coverage
+          retention-days: 7
+
+  build:
+    needs: [quality, test]
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🚚 Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: ⚡ Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: 📦 Install Dependencies
+        run: npm ci --prefer-offline
+
+      - name: 🛠️ Build Project
         run: npm run build
         env:
           NODE_ENV: production
 
-      # Deploy  Backend Assets          
-      - name: 🚀 Deploy (Delta Uploads)
+      - name: 📦 Upload Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: 📥 Download Build Artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist
+
+      - name: 🚀 Deploy to Server
         uses: SamKirkland/FTP-Deploy-Action@v4.3.5
         with:
           server: ${{ secrets.FTP_SERVER }}
@@ -42,6 +112,7 @@ jobs:
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
           security: loose
+          local-dir: dist
           exclude: |
             **/.git/**
             **/.github/**
