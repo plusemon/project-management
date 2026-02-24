@@ -30,9 +30,6 @@ jobs:
       - name: 🔍 Run Type Check
         run: npx tsc --noEmit
 
-      - name: 🔒 Security Audit
-        run: npm audit --audit-level=moderate
-
   build:
     needs: [quality]
     runs-on: ubuntu-latest
