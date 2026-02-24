@@ -26,12 +26,6 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ onEditTask, onNewTask }) =
       });
   };
 
-  const handleDragStart = (e: React.DragEvent, task: Task) => {
-    setDragInfo({ taskId: task.id, sourceStatus: task.status });
-    e.dataTransfer.setData('taskId', task.id);
-    e.dataTransfer.effectAllowed = 'move';
-  };
-
   const handleDrop = (e: React.DragEvent, targetStatus: TaskStatus, targetIndex: number) => {
     e.preventDefault();
     const taskId = e.dataTransfer.getData('taskId');
@@ -129,7 +123,6 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ onEditTask, onNewTask }) =
                     <TaskCard 
                       task={task} 
                       onEdit={onEditTask}
-                      onDragStart={(e) => handleDragStart(e, task)}
                       isDragging={dragInfo?.taskId === task.id}
                     />
                   </div>

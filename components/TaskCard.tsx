@@ -9,11 +9,10 @@ interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   isListMode?: boolean;
-  onDragStart?: (e: React.DragEvent) => void;
   isDragging?: boolean;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = false, onDragStart, isDragging = false }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = false, isDragging = false }) => {
   const { activeTaskId, setActiveTask, projects } = useTaskContext();
   
   const isActive = activeTaskId === task.id;
@@ -24,17 +23,10 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = f
   const totalSubtasks = task.subtasks?.length ?? 0;
   const hasSubtasks = totalSubtasks > 0;
 
-  const handleDragStart = (e: React.DragEvent) => {
-    e.dataTransfer.setData('taskId', task.id);
-    e.dataTransfer.effectAllowed = 'move';
-    onDragStart?.(e);
-  };
-
   return (
     <motion.div
       layoutId={task.id}
       draggable
-      onDragStart={handleDragStart}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
