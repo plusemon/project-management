@@ -15,11 +15,14 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ onEditTask, onNewTask }) =
   const [dragInfo, setDragInfo] = useState<{ taskId: string; sourceStatus: TaskStatus } | null>(null);
   const [dropTarget, setDropTarget] = useState<{ status: TaskStatus; index: number } | null>(null);
 
+  const handleTaskDragStart = (taskId: string, sourceStatus: TaskStatus) => {
+    setDragInfo({ taskId, sourceStatus });
+  };
+
   const getTasksByStatus = (status: TaskStatus) => {
     return filteredTasks
       .filter(t => t.status === status)
       .sort((a, b) => {
-        // Sort by order if available, otherwise by createdAt
         const orderA = a.order ?? a.createdAt;
         const orderB = b.order ?? b.createdAt;
         return orderA - orderB;
@@ -124,6 +127,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ onEditTask, onNewTask }) =
                       task={task} 
                       onEdit={onEditTask}
                       isDragging={dragInfo?.taskId === task.id}
+                      onDragStart={handleTaskDragStart}
                     />
                   </div>
                 </div>

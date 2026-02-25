@@ -1,5 +1,5 @@
 import React from 'react';
-import { Task, PRIORITY_COLORS } from '../types';
+import { Task, PRIORITY_COLORS, TaskStatus } from '../types';
 import { useTaskContext } from '../context/TaskContext';
 import { Play, Pause, Calendar, ListChecks, Flag } from 'lucide-react';
 import { motion } from 'framer-motion';
@@ -10,9 +10,10 @@ interface TaskCardProps {
   onEdit: (task: Task) => void;
   isListMode?: boolean;
   isDragging?: boolean;
+  onDragStart?: (taskId: string, status: TaskStatus) => void;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = false, isDragging = false }) => {
+export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = false, isDragging = false, onDragStart }) => {
   const { activeTaskId, setActiveTask, projects } = useTaskContext();
   
   const isActive = activeTaskId === task.id;
@@ -27,6 +28,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = f
     <motion.div
       layoutId={task.id}
       draggable
+      onDragStart={() => onDragStart?.(task.id, task.status)}
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.95 }}
