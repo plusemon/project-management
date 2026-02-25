@@ -1,7 +1,3 @@
-<div align="center">
-  <img width="1200" height="475" alt="DevFocus Banner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
-
 # DevFocus
 
 A productivity-focused task manager built for developers. Manage your projects with a powerful Kanban board or priorities list view, track, subtasks, and deadlines — all with a sleek dark-mode interface.
