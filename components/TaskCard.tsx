@@ -28,7 +28,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({ task, onEdit, isListMode = f
     <motion.div
       layoutId={task.id}
       draggable
-      onDragStart={(e) => {
+      onDragStartCapture={(e) => {
         e.dataTransfer.setData('taskId', task.id);
         e.dataTransfer.setData('text/plain', task.id);
         e.dataTransfer.effectAllowed = 'move';

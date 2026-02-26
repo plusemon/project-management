@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Task, TaskStatus, Tag, INITIAL_TAGS, Subtask, Priority } from '../types';
 import { useTaskContext } from '../context/TaskContext';
 import {
@@ -42,20 +42,21 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
   const [priority, setPriority] = useState<Priority>(null);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
 
-  const escapeHtml = (value: string) =>
+  const escapeHtml = useCallback((value: string) =>
     value
       .replace(/&/g, '&amp;')
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+      .replace(/'/g, '&#39;')
+  , []);
 
-  const toEditorHtml = (value: string) => {
+  const toEditorHtml = useCallback((value: string) => {
     if (!value.trim()) return '';
     const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(value);
     if (looksLikeHtml) return value;
     return escapeHtml(value).replace(/\n/g, '<br />');
-  };
+  }, [escapeHtml]);
 
   const applyFormat = (command: string, commandValue?: string) => {
     if (!editorRef.current) return;
@@ -79,7 +80,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
       if (initialStatus) setStatus(initialStatus);
       if (selectedProjectId) setProjectId(selectedProjectId);
     }
-  }, [taskToEdit, initialStatus, isOpen, selectedProjectId]);
+  }, [taskToEdit, initialStatus, isOpen, selectedProjectId, toEditorHtml]);
 
   const resetForm = () => {
     setTitle('');
@@ -95,7 +96,7 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
   useEffect(() => {
     if (!isOpen || !editorRef.current) return;
     editorRef.current.innerHTML = description || '';
-  }, [isOpen, taskToEdit, initialStatus]);
+  }, [isOpen, description]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
