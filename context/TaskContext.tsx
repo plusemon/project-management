@@ -56,7 +56,10 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const [activeTaskId, setActiveTaskId] = useState<string | null>(null);
   
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth >= 768);
-  const [selectedProjectId, setSelectedProject] = useState<string | null>(null);
+  const [selectedProjectId, setSelectedProject] = useState<string | null>(() => {
+    const saved = localStorage.getItem('devfocus_selected_project');
+    return saved ? saved : null;
+  });
 
   const [theme, setTheme] = useState<Theme>(() => {
     const saved = localStorage.getItem('theme');
@@ -75,6 +78,14 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     root.classList.add(theme);
     localStorage.setItem('theme', theme);
   }, [theme]);
+
+  useEffect(() => {
+    if (selectedProjectId) {
+      localStorage.setItem('devfocus_selected_project', selectedProjectId);
+    } else {
+      localStorage.removeItem('devfocus_selected_project');
+    }
+  }, [selectedProjectId]);
 
   const toggleTheme = () => {
     setTheme(prev => prev === 'dark' ? 'light' : 'dark');
@@ -146,6 +157,12 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       cleanup.then(fn => fn());
     };
   }, [user]);
+
+  useEffect(() => {
+    if (!selectedProjectId) return;
+    const exists = projects.some(p => p.id === selectedProjectId);
+    if (!exists) setSelectedProject(null);
+  }, [projects, selectedProjectId]);
 
   const filteredTasks = useMemo(() => {
     const safeTasks = Array.isArray(tasks) ? tasks : [];
