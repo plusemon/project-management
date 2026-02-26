@@ -17,8 +17,7 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({ subtasks, onChange }) 
   const totalCount = subtasks.length;
   const progress = totalCount > 0 ? (completedCount / totalCount) * 100 : 0;
 
-  const handleAddSubtask = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleAddSubtask = () => {
     if (!newSubtaskTitle.trim()) return;
 
     const newSubtask: Subtask = {
@@ -118,22 +117,29 @@ export const SubtaskList: React.FC<SubtaskListProps> = ({ subtasks, onChange }) 
       )}
 
       {/* Add subtask input */}
-      <form onSubmit={handleAddSubtask} className="flex items-center gap-2">
+      <div className="flex items-center gap-2">
         <input
           type="text"
           value={newSubtaskTitle}
           onChange={(e) => setNewSubtaskTitle(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
+              handleAddSubtask();
+            }
+          }}
           placeholder="Add a subtask..."
           className="flex-1 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-3 py-1.5 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
         />
         <button
-          type="submit"
+          type="button"
+          onClick={handleAddSubtask}
           disabled={!newSubtaskTitle.trim()}
           className="p-1.5 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-md transition-colors"
         >
           <Plus size={16} />
         </button>
-      </form>
+      </div>
     </div>
   );
 };

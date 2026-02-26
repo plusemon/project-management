@@ -12,7 +12,6 @@ import {
   signInWithPopup, 
   signOut, 
   onAuthStateChanged,
-  signInAnonymously,
   User
 } from 'firebase/auth';
 import { Task, Project } from '../types';
@@ -21,26 +20,11 @@ import { db, auth, googleProvider } from './firebase';
 const TASKS_COLLECTION = 'tasks';
 const PROJECTS_COLLECTION = 'projects';
 
-// Get or create a unique device ID for this browser
-const getDeviceId = (): string => {
-  const STORAGE_KEY = 'devfocus_device_id';
-  let deviceId = localStorage.getItem(STORAGE_KEY);
-  
-  if (!deviceId) {
-    // Generate a unique device ID
-    deviceId = 'device_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-    localStorage.setItem(STORAGE_KEY, deviceId);
-  }
-  
-  return deviceId;
-};
-
-// Get user ID - use Firebase auth user or fall back to device ID
 const getUserId = (user: User | null): string => {
-  if (user) {
-    return user.uid; // Authenticated user
+  if (!user) {
+    throw new Error('Authentication required');
   }
-  return getDeviceId(); // Anonymous device-based sync
+  return user.uid;
 };
 
 // Mock initial data if empty
@@ -270,17 +254,6 @@ export const storageService = {
     }
   },
 
-  // Sign in anonymously to enable Firestore sync without explicit authentication
-  signInAnonymously: async (): Promise<User | null> => {
-    try {
-      const result = await signInAnonymously(auth);
-      return result.user;
-    } catch (e) {
-      console.warn('Anonymous sign-in failed (may need to enable in Firebase Console)', e);
-      return null;
-    }
-  },
-
   signOut: async (): Promise<void> => {
     try {
       await signOut(auth);
@@ -295,10 +268,6 @@ export const storageService = {
 
   getCurrentUser: (): User | null => {
     return auth.currentUser;
-  },
-
-  getDeviceId: (): string => {
-    return getDeviceId();
   },
 
   isAuthenticated: (): boolean => {

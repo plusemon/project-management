@@ -149,10 +149,12 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const filteredTasks = useMemo(() => {
     const safeTasks = Array.isArray(tasks) ? tasks : [];
+    const stripHtml = (value: string) => value.replace(/<[^>]*>/g, ' ');
     return safeTasks.filter(t => {
+      const searchableDescription = stripHtml(t.description || '').toLowerCase();
       const matchesSearch = searchQuery.trim() === '' || 
         t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.description.toLowerCase().includes(searchQuery.toLowerCase());
+        searchableDescription.includes(searchQuery.toLowerCase());
       
       const matchesProject = selectedProjectId ? t.projectId === selectedProjectId : true;
       

@@ -43,7 +43,7 @@ npm install
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
 2. Create a new project
-3. Enable **Authentication**: Add Google and Anonymous sign-in providers
+3. Enable **Authentication**: Add Google sign-in provider
 4. Create a **Web App** and copy the config values
 5. Copy `.env.example` to `.env` and fill in your Firebase credentials:
 

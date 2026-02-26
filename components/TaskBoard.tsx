@@ -31,7 +31,7 @@ export const TaskBoard: React.FC<TaskBoardProps> = ({ onEditTask, onNewTask }) =
 
   const handleDrop = (e: React.DragEvent, targetStatus: TaskStatus, targetIndex: number) => {
     e.preventDefault();
-    const taskId = e.dataTransfer.getData('taskId');
+    const taskId = e.dataTransfer.getData('taskId') || e.dataTransfer.getData('text/plain');
     
     if (taskId && dragInfo) {
       if (dragInfo.sourceStatus === targetStatus) {

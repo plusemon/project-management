@@ -1,9 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Task, TaskStatus, Tag, INITIAL_TAGS, Subtask, Priority } from '../types';
 import { useTaskContext } from '../context/TaskContext';
-import { X, Save, Trash2, Tag as TagIcon } from 'lucide-react';
+import {
+  X,
+  Save,
+  Trash2,
+  Tag as TagIcon,
+  Bold,
+  Italic,
+  Underline,
+  List,
+  ListOrdered,
+  Link2,
+  Eraser,
+  RemoveFormatting,
+} from 'lucide-react';
 import { cn } from '../utils/cn';
-import ReactMarkdown from 'react-markdown';
 import { ConfirmationModal } from './ConfirmationModal';
 import { DatePicker } from './DatePicker';
 import { PrioritySelect } from './PrioritySelect';
@@ -17,23 +29,45 @@ interface TaskModalProps {
 }
 
 export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdit, initialStatus }) => {
-  const { addTask, updateTask, deleteTask, projects } = useTaskContext();
+  const { addTask, updateTask, deleteTask, projects, selectedProjectId } = useTaskContext();
+  const editorRef = useRef<HTMLDivElement | null>(null);
   
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<TaskStatus>(TaskStatus.BACKLOG);
   const [selectedTags, setSelectedTags] = useState<Tag[]>([]);
   const [projectId, setProjectId] = useState<string>('');
-  const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [dueDate, setDueDate] = useState<number | null>(null);
   const [priority, setPriority] = useState<Priority>(null);
   const [subtasks, setSubtasks] = useState<Subtask[]>([]);
 
+  const escapeHtml = (value: string) =>
+    value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+
+  const toEditorHtml = (value: string) => {
+    if (!value.trim()) return '';
+    const looksLikeHtml = /<\/?[a-z][\s\S]*>/i.test(value);
+    if (looksLikeHtml) return value;
+    return escapeHtml(value).replace(/\n/g, '<br />');
+  };
+
+  const applyFormat = (command: string, commandValue?: string) => {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    document.execCommand(command, false, commandValue);
+    setDescription(editorRef.current.innerHTML);
+  };
+
   useEffect(() => {
     if (taskToEdit) {
       setTitle(taskToEdit.title);
-      setDescription(taskToEdit.description);
+      setDescription(toEditorHtml(taskToEdit.description));
       setStatus(taskToEdit.status);
       setSelectedTags(taskToEdit.tags);
       setProjectId(taskToEdit.projectId || '');
@@ -43,8 +77,9 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
     } else {
       resetForm();
       if (initialStatus) setStatus(initialStatus);
+      if (selectedProjectId) setProjectId(selectedProjectId);
     }
-  }, [taskToEdit, initialStatus, isOpen]);
+  }, [taskToEdit, initialStatus, isOpen, selectedProjectId]);
 
   const resetForm = () => {
     setTitle('');
@@ -56,6 +91,11 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
     setPriority(null);
     setSubtasks([]);
   };
+
+  useEffect(() => {
+    if (!isOpen || !editorRef.current) return;
+    editorRef.current.innerHTML = description || '';
+  }, [isOpen, taskToEdit, initialStatus]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -109,160 +149,286 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, taskToEdi
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl animate-in zoom-in-95 duration-200 transition-colors">
-        
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-800">
-          <h2 className="text-lg font-semibold text-slate-800 dark:text-slate-100">
-            {taskToEdit ? 'Edit Task' : 'New Task'}
-          </h2>
-          <div className="flex items-center gap-2">
-            {taskToEdit && (
-              <button onClick={handleDelete} className="p-2 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded transition-colors">
-                <Trash2 size={18} />
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 backdrop-blur-md p-3 sm:p-6 animate-in fade-in duration-200">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_20%,rgba(56,189,248,0.22),transparent_35%),radial-gradient(circle_at_85%_80%,rgba(99,102,241,0.25),transparent_35%)]" />
+      <div className="relative w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden rounded-2xl border border-slate-200/70 dark:border-slate-700/60 bg-white/90 dark:bg-slate-900/90 shadow-[0_32px_120px_-36px_rgba(15,23,42,0.65)] animate-in zoom-in-95 duration-200">
+
+        <div className="shrink-0 px-4 sm:px-5 py-3 border-b border-slate-200/80 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md">
+          <div className="flex items-start justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-[10px] uppercase tracking-[0.22em] font-semibold text-slate-500 dark:text-slate-400">
+                {taskToEdit ? 'Task Workspace' : 'Create Flow'}
+              </p>
+              <h2 className="text-lg sm:text-xl font-semibold text-slate-900 dark:text-slate-100">
+                {taskToEdit ? 'Edit Task' : 'Create New Task'}
+              </h2>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                Capture context, priority, and next actions in one place.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              {taskToEdit && (
+                <button
+                  onClick={handleDelete}
+                  className="p-2 rounded-lg text-red-500 bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/30 hover:bg-red-100 dark:hover:bg-red-500/20 transition-colors"
+                  title="Delete task"
+                >
+                  <Trash2 size={16} />
+                </button>
+              )}
+              <button
+                onClick={onClose}
+                className="p-2 rounded-lg text-slate-500 dark:text-slate-300 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
+                title="Close"
+              >
+                <X size={18} />
               </button>
-            )}
-            <button onClick={onClose} className="p-2 text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded transition-colors">
-              <X size={20} />
-            </button>
+            </div>
           </div>
         </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 scrollbar-hide">
-          <form id="task-form" onSubmit={handleSubmit} className="space-y-6">
-            
-            {/* Title */}
-            <div>
+        <div className="flex-1 overflow-y-auto scrollbar-hide">
+          <form id="task-form" onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4">
+            <section className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 p-3 sm:p-4">
               <input
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="Task title"
-                className="w-full bg-transparent text-2xl font-bold text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none"
+                placeholder="What needs to get done?"
+                className="w-full bg-transparent text-xl sm:text-2xl font-semibold text-slate-900 dark:text-slate-50 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none"
               />
-            </div>
-
-            {/* Meta Controls */}
-            <div className="flex flex-wrap gap-4 text-sm">
-              <div className="flex flex-col gap-1.5">
-                <span className="text-slate-500 text-xs font-semibold uppercase">Status</span>
-                <select 
-                  value={status} 
-                  onChange={(e) => setStatus(e.target.value as TaskStatus)}
-                  className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md px-2 py-1 text-slate-700 dark:text-slate-300 focus:ring-1 focus:ring-indigo-500 outline-none"
-                >
-                  {Object.values(TaskStatus).map(s => (
-                    <option key={s} value={s}>{s.replace('_', ' ')}</option>
-                  ))}
-                </select>
+              <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                {title.trim().length}/120
               </div>
+            </section>
 
-              <DatePicker value={dueDate} onChange={setDueDate} />
+            <section className="grid grid-cols-1 xl:grid-cols-[minmax(0,1.7fr),minmax(0,1fr)] gap-3">
+              <div className="space-y-3">
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400 mb-3">
+                    Status
+                  </p>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                    {Object.values(TaskStatus).map((currentStatus) => {
+                      const isSelected = status === currentStatus;
+                      return (
+                        <button
+                          key={currentStatus}
+                          type="button"
+                          onClick={() => setStatus(currentStatus)}
+                          className={cn(
+                            'rounded-lg px-2.5 py-1.5 text-[11px] font-semibold border transition-all',
+                            isSelected
+                              ? 'bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/30'
+                              : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-indigo-300 dark:hover:border-indigo-500/40'
+                          )}
+                        >
+                          {currentStatus.replace('_', ' ')}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
 
-              <PrioritySelect value={priority} onChange={setPriority} />
-
-              <div className="flex flex-col gap-1.5">
-                <span className="text-slate-500 text-xs font-semibold uppercase">Project</span>
-                <div className="flex items-center gap-2">
-                  {projects.map(p => (
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-3 space-y-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    Description
+                  </p>
+                  <div className="flex flex-wrap items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-1">
                     <button
                       type="button"
-                      key={p.id}
-                      onClick={() => setProjectId(p.id)}
-                      className={cn(
-                        "px-2 py-1 rounded-md border text-xs font-medium transition-all",
-                        projectId === p.id 
-                          ? `bg-slate-100 dark:bg-slate-800 ${p.color} border-slate-300 dark:border-slate-600`
-                          : "bg-transparent border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:hover:border-slate-600"
-                      )}
+                      onClick={() => applyFormat('bold')}
+                      aria-label="Bold"
+                      className="p-1.5 rounded-md text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      title="Bold"
                     >
-                      {p.name}
+                      <Bold size={14} />
                     </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Tags */}
-            <div className="space-y-2">
-              <span className="text-slate-500 text-xs font-semibold uppercase flex items-center gap-2">
-                <TagIcon size={12} /> Tags
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {INITIAL_TAGS.map(tag => {
-                  const isSelected = selectedTags.some(t => t.id === tag.id);
-                  return (
                     <button
                       type="button"
-                      key={tag.id}
-                      onClick={() => toggleTag(tag)}
+                      onClick={() => applyFormat('italic')}
+                      aria-label="Italic"
+                      className="p-1.5 rounded-md text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      title="Italic"
+                    >
+                      <Italic size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyFormat('underline')}
+                      aria-label="Underline"
+                      className="p-1.5 rounded-md text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      title="Underline"
+                    >
+                      <Underline size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyFormat('insertUnorderedList')}
+                      aria-label="Bullet list"
+                      className="p-1.5 rounded-md text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      title="Bullet list"
+                    >
+                      <List size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => applyFormat('insertOrderedList')}
+                      aria-label="Numbered list"
+                      className="p-1.5 rounded-md text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      title="Numbered list"
+                    >
+                      <ListOrdered size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const url = window.prompt('Enter URL');
+                        if (url) applyFormat('createLink', url);
+                      }}
+                      aria-label="Insert link"
+                      className="p-1.5 rounded-md text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      title="Insert link"
+                    >
+                      <Link2 size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!editorRef.current) return;
+                        editorRef.current.focus();
+                        document.execCommand('removeFormat');
+                        setDescription(editorRef.current.innerHTML);
+                      }}
+                      aria-label="Remove selected formatting"
+                      className="p-1.5 rounded-md text-slate-500 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700"
+                      title="Remove selected formatting"
+                    >
+                      <RemoveFormatting size={14} />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDescription('');
+                        if (editorRef.current) editorRef.current.innerHTML = '';
+                      }}
+                      aria-label="Clear"
+                      className="ml-auto p-1.5 rounded-md text-red-500 hover:bg-red-50 dark:hover:bg-red-500/20"
+                      title="Clear"
+                    >
+                      <Eraser size={14} />
+                    </button>
+                  </div>
+                  <div
+                    ref={editorRef}
+                    contentEditable
+                    suppressContentEditableWarning
+                    onInput={(e) => setDescription((e.target as HTMLDivElement).innerHTML)}
+                    data-placeholder="Add details, code snippets, or checklists..."
+                    className="min-h-40 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-3 text-sm text-slate-700 dark:text-slate-300 focus:outline-none focus:ring-2 focus:ring-indigo-500/30 [&:empty:before]:content-[attr(data-placeholder)] [&:empty:before]:text-slate-400 dark:[&:empty:before]:text-slate-500"
+                  />
+                </div>
+
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-3">
+                  <SubtaskList subtasks={subtasks} onChange={setSubtasks} />
+                </div>
+              </div>
+
+              <aside className="space-y-3">
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-3 space-y-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400">
+                    Scheduling
+                  </p>
+                  <DatePicker value={dueDate} onChange={setDueDate} />
+                  <PrioritySelect value={priority} onChange={setPriority} />
+                </div>
+
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400 mb-3">
+                    Project
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setProjectId('')}
                       className={cn(
-                        "text-xs px-2 py-1 rounded-full border transition-all",
-                        isSelected 
-                          ? tag.color 
-                          : "bg-slate-100 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 hover:border-slate-300 dark:hover:border-slate-600"
+                        'text-[11px] px-2 py-1 rounded-full border font-medium transition-colors',
+                        !projectId
+                          ? 'bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 border-transparent'
+                          : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
                       )}
                     >
-                      {tag.name}
+                      No project
                     </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Subtasks */}
-            <SubtaskList subtasks={subtasks} onChange={setSubtasks} />
-
-            {/* Description / Markdown Editor */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500 text-xs font-semibold uppercase">Description (Markdown)</span>
-                <button 
-                  type="button"
-                  onClick={() => setIsPreviewMode(!isPreviewMode)}
-                  className="text-xs text-indigo-600 dark:text-indigo-400 hover:text-indigo-500"
-                >
-                  {isPreviewMode ? 'Edit' : 'Preview'}
-                </button>
-              </div>
-              
-              {isPreviewMode ? (
-                <div className="prose prose-slate dark:prose-invert prose-sm max-w-none bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg min-h-[200px] border border-slate-200 dark:border-slate-700">
-                  <ReactMarkdown>{description || '*No description provided.*'}</ReactMarkdown>
+                    {projects.map((p) => (
+                      <button
+                        type="button"
+                        key={p.id}
+                        onClick={() => setProjectId(p.id)}
+                        className={cn(
+                          'text-[11px] px-2 py-1 rounded-full border font-medium transition-colors',
+                          projectId === p.id
+                            ? `bg-slate-100 dark:bg-slate-800 ${p.color} border-slate-300 dark:border-slate-600`
+                            : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        )}
+                      >
+                        {p.name}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              ) : (
-                <textarea
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                  placeholder="Add details, code snippets, or checklists..."
-                  className="w-full h-48 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-4 text-slate-800 dark:text-slate-300 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono text-sm"
-                />
-              )}
-            </div>
 
+                <div className="rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/40 p-3">
+                  <p className="text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-500 dark:text-slate-400 mb-3 flex items-center gap-2">
+                    <TagIcon size={12} /> Tags
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {INITIAL_TAGS.map((tag) => {
+                      const isSelected = selectedTags.some((t) => t.id === tag.id);
+                      return (
+                        <button
+                          type="button"
+                          key={tag.id}
+                          onClick={() => toggleTag(tag)}
+                          className={cn(
+                            'text-[11px] px-2 py-1 rounded-full border transition-all',
+                            isSelected
+                              ? tag.color
+                              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-slate-300 dark:hover:border-slate-600'
+                          )}
+                        >
+                          {tag.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              </aside>
+            </section>
           </form>
         </div>
 
-        {/* Footer */}
-        <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex justify-end gap-3">
-          <button 
-            type="button"
-            onClick={onClose}
-            className="px-4 py-2 text-sm text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white transition-colors"
-          >
-            Cancel
-          </button>
-          <button 
-            type="submit"
-            form="task-form"
-            className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-2 shadow-lg shadow-indigo-500/20"
-          >
-            <Save size={16} /> Save Task
-          </button>
+        <div className="shrink-0 px-4 sm:px-5 py-3 border-t border-slate-200/80 dark:border-slate-800 bg-white/70 dark:bg-slate-900/70 backdrop-blur-md flex items-center justify-between">
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            {taskToEdit ? 'Update task details' : 'Create task and start execution'}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-3.5 py-1.5 rounded-lg text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              form="task-form"
+              className="px-4 py-1.5 rounded-lg text-sm font-semibold text-white bg-gradient-to-r from-indigo-600 to-cyan-500 hover:from-indigo-500 hover:to-cyan-400 shadow-lg shadow-indigo-500/30 transition-all flex items-center gap-1.5"
+            >
+              <Save size={15} /> Save Task
+            </button>
+          </div>
         </div>
-
       </div>
 
       {/* Delete Confirmation Modal */}

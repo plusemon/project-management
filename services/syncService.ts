@@ -36,13 +36,8 @@ let unsubscribes: Unsubscribe[] = [];
 let hasRealtimeListeners = false;
 let isProcessSyncQueueLocked = false;
 
-const getUserId = (user: User | null): string => {
-  if (user) return user.uid;
-  const stored = localStorage.getItem('devfocus_device_id');
-  if (stored) return stored;
-  const newId = 'device_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
-  localStorage.setItem('devfocus_device_id', newId);
-  return newId;
+const getUserId = (user: User): string => {
+  return user.uid;
 };
 
 const updateStatus = (newStatus: SyncStatus) => {
