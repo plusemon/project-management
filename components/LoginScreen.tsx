@@ -7,7 +7,7 @@ const LoginScreen: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 pointer-events-none"></div>
+      <div className="grain-overlay-light"></div>
       
       <div className="relative z-10 max-w-md w-full">
         <div className="text-center mb-8">

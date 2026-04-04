@@ -177,7 +177,9 @@ const setupRealtimeListeners = (user: User) => {
       });
     },
     (error) => {
-      console.error('Tasks real-time listener error:', error);
+      console.warn('Tasks real-time listener error:', error);
+      // Don't crash on permission errors - real-time sync is optional
+      // Falls back to local data and periodic sync
     }
   );
   
@@ -204,7 +206,8 @@ const setupRealtimeListeners = (user: User) => {
       });
     },
     (error) => {
-      console.error('Projects real-time listener error:', error);
+      console.warn('Projects real-time listener error:', error);
+      // Don't crash on permission errors - real-time sync is optional
     }
   );
   
@@ -302,6 +305,26 @@ export const syncService = {
       updateStatus('idle');
     } catch (error) {
       console.error('Failed to load from cloud:', error);
+      
+      // Check if it's a permission error
+      const errorCode = (error as { code?: string }).code;
+      const isPermissionError = errorCode?.includes('permission') || errorCode?.includes('PERMISSION') || 
+        error instanceof Error && error.message.includes('permission');
+      
+      if (isPermissionError) {
+        console.warn('[Sync] Permission error - user may not have access to Firestore. Using local data only.');
+        // Still load local data even on permission error
+        const localTasks = await indexedDBService.getAllTasks();
+        const localProjects = await indexedDBService.getAllProjects();
+        if (!skipCallbacks) {
+          callbacks.onTasksSync?.(localTasks);
+          callbacks.onProjectsSync?.(localProjects);
+        }
+        // Set status to indicate permission issue but still functional
+        updateStatus('offline'); // Treat as offline-like since cloud access denied
+        return;
+      }
+      
       if (!skipCallbacks) {
         const localTasks = await indexedDBService.getAllTasks();
         const localProjects = await indexedDBService.getAllProjects();

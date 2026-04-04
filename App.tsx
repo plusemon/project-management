@@ -98,7 +98,7 @@ const DevFocusApp: React.FC = () => {
         <Header onShowShortcuts={() => setShowShortcutsGuide(true)} />
         
         <main className="flex-1 overflow-hidden p-4 sm:p-6 relative">
-          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 dark:opacity-5 pointer-events-none z-0"></div>
+          <div className="grain-overlay"></div>
           <div className="relative z-10 h-full">
             {viewMode === 'KANBAN' ? (
               <TaskBoard onEditTask={handleEditTask} onNewTask={handleNewTask} />

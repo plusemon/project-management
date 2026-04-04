@@ -122,6 +122,29 @@ Open [http://localhost:5173](http://localhost:5173) in your browser.
 4. Create a **Web App** → copy config values
 5. Paste values into `.env.local`
 
+### Firestore Security Rules
+
+This project includes `firestore.rules` file that allows authenticated users to access their own data only.
+
+**Deploy rules using Firebase CLI:**
+
+```bash
+# Install Firebase CLI
+npm install -g firebase-tools
+
+# Login to Firebase
+firebase login
+
+# Deploy Firestore rules
+firebase deploy --only firestore:rules
+```
+
+**Rules explanation:**
+- Users can only read/write data in `users/{userId}/` paths
+- The `userId` must match the authenticated user's UID
+- This ensures users cannot access each other's data
+3. The `userId` in Firestore paths matches the user's UID
+
 ### Available Scripts
 
 | Command | Description |
