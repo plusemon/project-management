@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useTaskContext } from '../context/TaskContext';
-import { Layout, ListTodo, Hash, Plus, ChevronLeft, ChevronRight, Keyboard, Trash2, Layers, Sun, Moon, X } from 'lucide-react';
+import { Layout, ListTodo, Hash, Plus, ChevronLeft, ChevronRight, Keyboard, Trash2, Layers, Sun, Moon, X, Edit3 } from 'lucide-react';
 import { cn } from '../utils/cn';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -17,7 +17,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onShowShortcuts }) => {
     projects, 
     viewMode, 
     setViewMode, 
-    addProject, 
+    addProject,
+    updateProject,
     deleteProject,
     selectedProjectId,
     setSelectedProject,
@@ -28,6 +29,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ onShowShortcuts }) => {
   const [isCreatingProject, setIsCreatingProject] = useState(false);
   const [newProjectName, setNewProjectName] = useState('');
   const [projectToDelete, setProjectToDelete] = useState<string | null>(null);
+  const [projectToRename, setProjectToRename] = useState<string | null>(null);
+  const [renameValue, setRenameValue] = useState('');
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
@@ -54,6 +57,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ onShowShortcuts }) => {
       setIsCreatingProject(false);
     } else {
         setIsCreatingProject(false);
+    }
+  };
+
+  const handleStartRename = (projectId: string) => {
+    const project = projects.find(p => p.id === projectId);
+    if (project) {
+      setProjectToRename(projectId);
+      setRenameValue(project.name);
+    }
+  };
+
+  const handleRenameProject = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (projectToRename && renameValue.trim()) {
+      updateProject(projectToRename, { name: renameValue.trim() });
+      setProjectToRename(null);
+      setRenameValue('');
+    } else {
+      setProjectToRename(null);
+      setRenameValue('');
     }
   };
 
@@ -209,36 +232,66 @@ export const Sidebar: React.FC<SidebarProps> = ({ onShowShortcuts }) => {
 
             {projects.map(project => {
               const isSelected = selectedProjectId === project.id;
+              const isRenaming = projectToRename === project.id;
               return (
                 <div key={project.id} className="group relative">
-                    <button 
-                      onClick={() => handleProjectClick(project.id)}
-                      className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left",
-                        isSelected 
-                          ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-200" 
-                          : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
-                      )}
-                    >
-                      <Hash size={18} className={cn("shrink-0", project.color)} />
-                      {sidebarOpen && <span className="text-sm truncate">{project.name}</span>}
-                      {sidebarOpen && isSelected && (
-                        <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div>
-                      )}
-                    </button>
-                    {sidebarOpen && (
-                        <button 
-                            onClick={(e) => { 
-                              e.stopPropagation(); 
+                  {isRenaming ? (
+                    <form onSubmit={handleRenameProject} className="px-3 py-1">
+                      <input
+                        type="text"
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={handleRenameProject}
+                        onKeyDown={(e) => { if(e.key === 'Escape') { setProjectToRename(null); setRenameValue(''); } }}
+                        placeholder="Project Name..."
+                        className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded px-2 py-1.5 text-sm text-slate-900 dark:text-slate-200 focus:outline-none focus:border-indigo-500 placeholder:text-slate-400"
+                      />
+                    </form>
+                  ) : (
+                    <>
+                      <button
+                        onClick={() => handleProjectClick(project.id)}
+                        className={cn(
+                          "w-full flex items-center gap-3 px-3 py-2 rounded-lg transition-colors text-left",
+                          isSelected
+                            ? "bg-slate-100 text-slate-900 dark:bg-slate-800 dark:text-slate-200"
+                            : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-slate-200"
+                        )}
+                      >
+                        <Hash size={18} className={cn("shrink-0", project.color)} />
+                        {sidebarOpen && <span className="text-sm truncate">{project.name}</span>}
+                        {sidebarOpen && isSelected && (
+                          <div className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-500 shadow-[0_0_8px_rgba(99,102,241,0.5)]"></div>
+                        )}
+                      </button>
+                      {sidebarOpen && (
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 md:opacity-0 opacity-100 transition-all z-10">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              e.preventDefault();
+                              handleStartRename(project.id);
+                            }}
+                            className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-md transition-all"
+                            title="Rename project"
+                          >
+                            <Edit3 size={14} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
                               e.preventDefault();
                               setProjectToDelete(project.id);
                             }}
-                            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-md opacity-0 group-hover:opacity-100 md:opacity-0 opacity-100 transition-all z-10"
+                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-700/50 rounded-md transition-all"
                             title="Delete project"
-                        >
+                          >
                             <Trash2 size={14} />
-                        </button>
-                    )}
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               );
             })}

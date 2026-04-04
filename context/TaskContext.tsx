@@ -31,6 +31,7 @@ interface TaskContextType {
   reorderTask: (taskId: string, newOrder: number) => void;
   
   addProject: (project: Omit<Project, 'id'>) => void;
+  updateProject: (id: string, updates: Partial<Project>) => void;
   deleteProject: (id: string) => void;
   setSelectedProject: (id: string | null) => void;
 
@@ -264,6 +265,14 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     syncService.queueProjectChange('create', newProject);
   }, []);
 
+  const updateProject = useCallback((id: string, updates: Partial<Project>) => {
+    setProjects(prev => prev.map(p => p.id === id ? { ...p, ...updates, updatedAt: Date.now() } : p));
+    const project = projects.find(p => p.id === id);
+    if (project) {
+      syncService.queueProjectChange('update', { ...project, ...updates, updatedAt: Date.now() });
+    }
+  }, [projects]);
+
   const deleteProject = useCallback((id: string) => {
     setProjects(prev => prev.filter(p => p.id !== id));
     if (selectedProjectId === id) setSelectedProject(null);
@@ -303,6 +312,7 @@ export const TaskProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       moveTask,
       reorderTask,
       addProject,
+      updateProject,
       deleteProject,
       setSelectedProject,
       setViewMode,
